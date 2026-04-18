@@ -1,0 +1,20 @@
+[package]
+name = "paid_ad_notifications"
+version = "0.1.0"
+description = "Paid ad notification policy and request registry"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "paid_ad_notifications"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.30.1"

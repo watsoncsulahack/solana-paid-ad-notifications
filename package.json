@@ -1,0 +1,14 @@
+{
+  "name": "solana-paid-ad-notifications",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "anchor test",
+    "build": "anchor build"
+  },
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.5.4"
+  }
+}
