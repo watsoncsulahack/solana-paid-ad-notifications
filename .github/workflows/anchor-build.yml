@@ -19,16 +19,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install system deps
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libudev-dev build-essential
 
-      - name: Install Solana CLI (v1.18.26)
+      - name: Install Solana CLI (stable)
         run: |
-          curl -sSfL https://release.anza.xyz/v1.18.26/install | sh
+          curl -sSfL https://release.anza.xyz/stable/install | sh
           export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
           which solana
@@ -43,14 +43,12 @@ jobs:
         run: |
           cargo build-sbf --version
 
-      - name: Build Anchor program (frozen + vendored)
+      - name: Build Anchor program (option1 toolchain path)
         working-directory: .
-        env:
-          CARGO_NET_OFFLINE: "true"
-          CARGO_MANIFEST_DIR: ${{ github.workspace }}
         run: |
+          if [ -f .cargo/config.toml ]; then mv .cargo/config.toml .cargo/config.vendored.toml; fi
           anchor keys sync
-          anchor build -- -- --frozen --locked
+          anchor build -- -- --locked
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
