@@ -1,0 +1,39 @@
+name: Notify OpenClaw on Build Completion
+
+on:
+  workflow_run:
+    workflows: ["Anchor Build (Devnet)"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify-openclaw:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Send completion event to OpenClaw hook
+        env:
+          OPENCLAW_HOOK_URL: ${{ secrets.OPENCLAW_HOOK_URL }}
+          OPENCLAW_HOOK_TOKEN: ${{ secrets.OPENCLAW_HOOK_TOKEN }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT: ${{ github.event.workflow_run.event }}
+        run: |
+          if [ -z "$OPENCLAW_HOOK_URL" ] || [ -z "$OPENCLAW_HOOK_TOKEN" ]; then
+            echo "OPENCLAW_HOOK_URL / OPENCLAW_HOOK_TOKEN is not configured; skipping notify."
+            exit 0
+          fi
+
+          MESSAGE="GitHub Actions completed. Conclusion: ${CONCLUSION}. Branch: ${BRANCH}. Event: ${EVENT}. SHA: ${HEAD_SHA}. Run: ${RUN_URL}. If failed, fetch logs, fix the issue, push a patch, and continue this loop until the build passes. If passed, post a short success summary."
+
+          curl -sS -X POST "$OPENCLAW_HOOK_URL" \
+            -H "Authorization: Bearer $OPENCLAW_HOOK_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"message\":\"${MESSAGE}\",\"name\":\"GitHub Build Completion\"}" \
+            -o /tmp/openclaw_notify_resp.json
+
+          echo "OpenClaw hook response:"
+          cat /tmp/openclaw_notify_resp.json
