@@ -34,3 +34,4 @@ See `docs/CONTRACT_DEVNET_MINIMAL.md` for details and next deploy steps.
 - `docs/ROADMAP.md`
 - `docs/ARCHITECTURE.md`
 - `docs/CONTRACT_DEVNET_MINIMAL.md`
+- `docs/CI_DEPENDENCY_PINNING.md`

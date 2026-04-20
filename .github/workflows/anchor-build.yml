@@ -43,11 +43,13 @@ jobs:
         run: |
           cargo build-sbf --version
 
-      - name: Build Anchor program
+      - name: Build Anchor program (frozen + vendored)
         working-directory: .
+        env:
+          CARGO_NET_OFFLINE: "true"
         run: |
           anchor keys sync
-          anchor build -- -- --locked
+          anchor build -- -- --frozen --locked
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
