@@ -11,34 +11,25 @@
 
 [package]
 edition = "2018"
-rust-version = "1.85.0"
 name = "unicode-segmentation"
-version = "1.13.2"
+version = "1.10.1"
 authors = [
     "kwantam <kwantam@gmail.com>",
     "Manish Goregaokar <manishsmail@gmail.com>",
 ]
-build = false
-include = [
-    "COPYRIGHT",
-    "LICENSE-MIT",
-    "LICENSE-APACHE",
-    "Cargo.toml",
-    "src/**/*.rs",
-    "README.md",
-    "tests/**/*.rs",
-    "benches/**/*.rs",
+exclude = [
+    "target/*",
+    "Cargo.lock",
+    "scripts/tmp",
+    "benches/texts/*",
+    "*.txt",
 ]
-autolib = false
-autobins = false
-autoexamples = false
-autotests = false
-autobenches = false
 description = """
 This crate provides Grapheme Cluster, Word and Sentence boundaries
 according to Unicode Standard Annex #29 rules.
 """
 homepage = "https://github.com/unicode-rs/unicode-segmentation"
+documentation = "https://unicode-rs.github.io/unicode-segmentation"
 readme = "README.md"
 keywords = [
     "text",
@@ -47,45 +38,26 @@ keywords = [
     "word",
     "boundary",
 ]
-license = "MIT OR Apache-2.0"
+license = "MIT/Apache-2.0"
 repository = "https://github.com/unicode-rs/unicode-segmentation"
 
-[features]
-no_std = []
-
-[lib]
-name = "unicode_segmentation"
-path = "src/lib.rs"
-
-[[test]]
-name = "test"
-path = "tests/test.rs"
-
 [[bench]]
-name = "chars"
-path = "benches/chars.rs"
+name = "graphemes"
 harness = false
 
 [[bench]]
-name = "unicode_word_indices"
-path = "benches/unicode_word_indices.rs"
+name = "unicode_words"
 harness = false
 
 [[bench]]
 name = "word_bounds"
-path = "benches/word_bounds.rs"
-harness = false
-
-[[bench]]
-name = "words"
-path = "benches/words.rs"
 harness = false
 
 [dev-dependencies.criterion]
-version = "0.5"
-
-[dev-dependencies.proptest]
-version = "1.7.0"
+version = "0.3"
 
 [dev-dependencies.quickcheck]
-version = "1.0"
+version = "0.7"
+
+[features]
+no_std = []
