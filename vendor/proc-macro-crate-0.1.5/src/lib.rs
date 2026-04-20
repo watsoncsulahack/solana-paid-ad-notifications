@@ -80,13 +80,15 @@ type CargoToml = HashMap<String, toml::Value>;
 /// The returned crate name is sanitized in such a way that it is a valid rust identifier. Thus,
 /// it is ready to be used in `extern crate` as identifier.
 pub fn crate_name(orig_name: &str) -> Result<String, String> {
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR")
-        .map_err(|_| "Could not find `CARGO_MANIFEST_DIR` env variable.")?;
+    let manifest_dir = match env::var("CARGO_MANIFEST_DIR") {
+        Ok(v) if !v.trim().is_empty() => v,
+        _ => return Ok(sanitize_crate_name(orig_name.to_owned())),
+    };
 
     let cargo_toml_path = PathBuf::from(manifest_dir).join("Cargo.toml");
 
     if !cargo_toml_path.exists() {
-        return Err(format!("`{}` does not exist.", cargo_toml_path.display()));
+        return Ok(sanitize_crate_name(orig_name.to_owned()));
     }
 
     let cargo_toml = open_cargo_toml(&cargo_toml_path)?;

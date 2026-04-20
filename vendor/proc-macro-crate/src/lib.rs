@@ -183,8 +183,15 @@ type CrateNames = BTreeMap<String, FoundCrate>;
 /// The returned crate name is sanitized in such a way that it is a valid rust identifier. Thus,
 /// it is ready to be used in `extern crate` as identifier.
 pub fn crate_name(orig_name: &str) -> Result<FoundCrate, Error> {
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").map_err(|_| Error::CargoManifestDirNotSet)?;
+    let manifest_dir = match env::var("CARGO_MANIFEST_DIR") {
+        Ok(v) if !v.trim().is_empty() => v,
+        _ => return Ok(FoundCrate::Name(sanitize_crate_name(orig_name))),
+    };
     let manifest_path = Path::new(&manifest_dir).join("Cargo.toml");
+
+    if !manifest_path.exists() {
+        return Ok(FoundCrate::Name(sanitize_crate_name(orig_name)));
+    }
 
     let workspace_manifest_path = workspace_manifest_path(&manifest_path)?;
 
