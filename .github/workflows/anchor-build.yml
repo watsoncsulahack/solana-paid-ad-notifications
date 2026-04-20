@@ -47,6 +47,7 @@ jobs:
         working-directory: .
         env:
           CARGO_NET_OFFLINE: "true"
+          CARGO_MANIFEST_DIR: ${{ github.workspace }}
         run: |
           anchor keys sync
           anchor build -- -- --frozen --locked
