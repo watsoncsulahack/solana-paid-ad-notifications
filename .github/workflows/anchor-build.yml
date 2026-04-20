@@ -34,11 +34,9 @@ jobs:
           which solana
           solana --version
 
-      - name: Install AVM + Anchor CLI (v0.30.1)
+      - name: Install Anchor CLI (v0.30.1)
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --locked
-          avm install 0.30.1
-          avm use 0.30.1
+          cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.1 anchor-cli --locked
           anchor --version
 
       - name: Verify SBF toolchain
