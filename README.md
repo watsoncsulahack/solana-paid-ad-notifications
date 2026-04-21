@@ -63,7 +63,15 @@ One-time setup in GitHub:
 Expected URL:
 - `https://watsoncsulahack.github.io/solana-paid-ad-notifications/`
 
+Public access note:
+- Repo visibility is public and Pages is configured with `build_type=workflow`, so the site should load on devices even when not signed into GitHub.
+- If a device still sees stale content, hard refresh or open in an incognito/private tab.
+
 At that URL, Phantom wallet connect should work over HTTPS.
+
+Additional page (separate wallet app):
+- `https://watsoncsulahack.github.io/solana-paid-ad-notifications/wallet-app.html`
+- This app can generate/import a demo wallet and bridge signing/transfer requests via `BroadcastChannel` to the main app.
 
 ## Web2.5 MVP (Pivot Implementation)
 A backend-driven web2.5 demo is included under `web25/`.
@@ -75,6 +83,12 @@ What it implements:
 - Advertiser on-chain payment (devnet transfer)
 - Backend tx signature mapping and confirmation checks
 - Recipient popup-style paid ad notifications after payment confirmation
+- Agent Gateway scaffold endpoints for paid skill offerings:
+  - `GET /api/agent/health`
+  - `POST /api/agent/skills`
+  - `GET /api/agent/skills`
+  - `POST /api/agent/quote`
+  - `POST /api/agent/execute`
 
 Run locally:
 ```bash

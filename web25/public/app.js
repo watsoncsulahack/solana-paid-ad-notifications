@@ -7,6 +7,7 @@ const enc = new TextEncoder();
 const els = {
   role: document.getElementById("role"),
   connectBtn: document.getElementById("connectBtn"),
+  connectRouterBtn: document.getElementById("connectRouterBtn"),
   loginBtn: document.getElementById("loginBtn"),
   session: document.getElementById("session"),
   recipientCard: document.getElementById("recipientCard"),
@@ -28,6 +29,35 @@ let provider = null;
 let wallet = null;
 let token = null;
 let currentAdRequest = null;
+let walletMode = null; // phantom | router
+const walletBridge = new BroadcastChannel("openclaw-wallet-bridge");
+
+function randomId() {
+  return Math.random().toString(36).slice(2);
+}
+
+function currentWalletBase58() {
+  return wallet ? wallet.toBase58() : null;
+}
+
+function requestRouter(type, payload = {}, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    const id = randomId();
+    const t = setTimeout(() => reject(new Error("Wallet router timeout")), timeoutMs);
+
+    function onMessage(ev) {
+      const msg = ev.data || {};
+      if (msg.id !== id) return;
+      walletBridge.removeEventListener("message", onMessage);
+      clearTimeout(t);
+      if (msg.error) return reject(new Error(msg.error));
+      resolve(msg.result);
+    }
+
+    walletBridge.addEventListener("message", onMessage);
+    walletBridge.postMessage({ id, type, payload });
+  });
+}
 
 function log(msg) {
   els.log.textContent = `${new Date().toISOString()} ${msg}\n` + els.log.textContent;
@@ -55,9 +85,22 @@ async function connectWallet() {
   provider = window.solana;
   const r = await provider.connect();
   wallet = new PublicKey(r.publicKey.toString());
-  els.session.innerHTML = `Connected: <code>${wallet.toBase58()}</code>`;
+  walletMode = "phantom";
+  els.session.innerHTML = `Connected via Phantom: <code>${wallet.toBase58()}</code>`;
   els.loginBtn.disabled = false;
+  els.payAdBtn.disabled = true;
   log(`Connected wallet ${wallet.toBase58()}`);
+}
+
+async function connectWalletRouter() {
+  await requestRouter("PING", {});
+  const pubkey = await requestRouter("GET_PUBLIC_KEY", {});
+  wallet = new PublicKey(pubkey);
+  walletMode = "router";
+  els.session.innerHTML = `Connected via Wallet Router: <code>${wallet.toBase58()}</code>`;
+  els.loginBtn.disabled = false;
+  els.payAdBtn.disabled = true;
+  log(`Connected router wallet ${wallet.toBase58()}`);
 }
 
 async function signIn() {
@@ -69,8 +112,15 @@ async function signIn() {
     body: JSON.stringify({ walletAddress: wallet.toBase58(), role }),
   });
 
-  const signed = await provider.signMessage(enc.encode(challenge.message), "utf8");
-  const sigB58 = solanaWeb3.bs58.encode(signed.signature);
+  let sigB58;
+  if (walletMode === "phantom") {
+    const signed = await provider.signMessage(enc.encode(challenge.message), "utf8");
+    sigB58 = solanaWeb3.bs58.encode(signed.signature);
+  } else if (walletMode === "router") {
+    sigB58 = await requestRouter("SIGN_MESSAGE", { message: challenge.message });
+  } else {
+    throw new Error("No wallet connection mode");
+  }
 
   const verified = await req("/api/auth/verify", {
     method: "POST",
@@ -84,7 +134,7 @@ async function signIn() {
 
   token = verified.token;
   showRolePanels(role);
-  els.session.innerHTML = `Signed in as <b>${role}</b>: <code>${wallet.toBase58()}</code>`;
+  els.session.innerHTML = `Signed in as <b>${role}</b> via <b>${walletMode}</b>: <code>${wallet.toBase58()}</code>`;
   log(`Signed in as ${role}`);
 }
 
@@ -159,23 +209,41 @@ async function createAdRequest() {
   log(`Created ad request ${currentAdRequest.id}`);
 }
 
+async function sendPaymentTxFromCurrentWallet(recipientWallet, lamports) {
+  if (walletMode === "phantom") {
+    const recipient = new PublicKey(recipientWallet);
+    const ix = SystemProgram.transfer({
+      fromPubkey: wallet,
+      toPubkey: recipient,
+      lamports,
+    });
+
+    const latest = await connection.getLatestBlockhash("confirmed");
+    const tx = new Transaction().add(ix);
+    tx.feePayer = wallet;
+    tx.recentBlockhash = latest.blockhash;
+
+    const sent = await provider.signAndSendTransaction(tx);
+    return typeof sent === "string" ? sent : sent.signature;
+  }
+
+  if (walletMode === "router") {
+    return await requestRouter("SEND_TRANSFER", {
+      recipientWallet,
+      lamports,
+    });
+  }
+
+  throw new Error("No wallet connected");
+}
+
 async function payAndLinkTx() {
-  if (!wallet || !currentAdRequest) return;
+  if (!currentAdRequest) return;
 
-  const recipient = new PublicKey(currentAdRequest.recipientWallet);
-  const ix = SystemProgram.transfer({
-    fromPubkey: wallet,
-    toPubkey: recipient,
-    lamports: currentAdRequest.amountLamports,
-  });
-
-  const latest = await connection.getLatestBlockhash("confirmed");
-  const tx = new Transaction().add(ix);
-  tx.feePayer = wallet;
-  tx.recentBlockhash = latest.blockhash;
-
-  const sent = await provider.signAndSendTransaction(tx);
-  const signature = typeof sent === "string" ? sent : sent.signature;
+  const signature = await sendPaymentTxFromCurrentWallet(
+    currentAdRequest.recipientWallet,
+    currentAdRequest.amountLamports
+  );
 
   await req(`/api/ads/${currentAdRequest.id}/submit-tx`, {
     method: "POST",
@@ -202,7 +270,8 @@ async function payAndLinkTx() {
   els.adState.innerHTML = `Still pending confirmation. Try Check Notifications on recipient side.`;
 }
 
-els.connectBtn.onclick = () => connectWallet().catch((e) => log(`ERROR connect: ${e.message}`));
+els.connectBtn.onclick = () => connectWallet().catch((e) => log(`ERROR connect phantom: ${e.message}`));
+els.connectRouterBtn.onclick = () => connectWalletRouter().catch((e) => log(`ERROR connect router: ${e.message}`));
 els.loginBtn.onclick = () => signIn().catch((e) => log(`ERROR signin: ${e.message}`));
 els.role.onchange = () => showRolePanels(els.role.value);
 els.optInBtn.onclick = () => saveRecipientPrefs().catch((e) => log(`ERROR opt-in: ${e.message}`));

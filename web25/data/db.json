@@ -2,5 +2,7 @@
   "users": [],
   "adRequests": [],
   "paymentLinks": [],
-  "notifications": []
+  "notifications": [],
+  "agentSkills": [],
+  "agentExecutions": []
 }

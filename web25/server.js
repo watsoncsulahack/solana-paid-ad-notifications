@@ -15,6 +15,7 @@ const {
 const PORT = process.env.PORT || 8787;
 const RPC_URL = process.env.SOLANA_RPC_URL || clusterApiUrl("devnet");
 const connection = new Connection(RPC_URL, "confirmed");
+const AGENT_GATEWAY_RECEIVER = process.env.AGENT_GATEWAY_RECEIVER || "2DLPPCwqowDeNVDf3PmxCgoWamMqrKJLpvLe2cvLwbCS";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +38,8 @@ function ensureDb() {
           adRequests: [],
           paymentLinks: [],
           notifications: [],
+          agentSkills: [],
+          agentExecutions: [],
         },
         null,
         2
@@ -52,6 +55,12 @@ function readDb() {
 
 function writeDb(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
+function ensureCollections(db) {
+  if (!Array.isArray(db.agentSkills)) db.agentSkills = [];
+  if (!Array.isArray(db.agentExecutions)) db.agentExecutions = [];
+  return db;
 }
 
 function getAuth(req) {
@@ -79,6 +88,11 @@ function requireRole(role) {
 
 function toLamports(sol) {
   return Math.round(Number(sol) * LAMPORTS_PER_SOL);
+}
+
+function quoteLamports(basePriceLamports, units) {
+  const u = Math.max(1, Number(units || 1));
+  return Math.floor(Number(basePriceLamports || 0) * u);
 }
 
 function userByWallet(db, wallet) {
@@ -155,7 +169,7 @@ app.post("/api/auth/verify", (req, res) => {
     createdAt: Date.now(),
   });
 
-  const db = readDb();
+  const db = ensureCollections(readDb());
   let user = userByWallet(db, walletAddress);
   if (!user) {
     user = {
@@ -180,7 +194,7 @@ app.post("/api/auth/verify", (req, res) => {
 
 app.post("/api/recipient/opt-in", requireAuth, requireRole("recipient"), (req, res) => {
   const preferences = req.body?.preferences || {};
-  const db = readDb();
+  const db = ensureCollections(readDb());
   const user = userByWallet(db, req.session.walletAddress);
   user.optedIn = true;
   user.preferences = preferences;
@@ -190,7 +204,7 @@ app.post("/api/recipient/opt-in", requireAuth, requireRole("recipient"), (req, r
 });
 
 app.get("/api/recipient/me", requireAuth, requireRole("recipient"), (req, res) => {
-  const db = readDb();
+  const db = ensureCollections(readDb());
   const user = userByWallet(db, req.session.walletAddress);
   res.json({ user });
 });
@@ -206,7 +220,7 @@ app.post("/api/ads", requireAuth, requireRole("advertiser"), (req, res) => {
   }
   if (!content) return res.status(400).json({ error: "Content required" });
 
-  const db = readDb();
+  const db = ensureCollections(readDb());
   const reqId = nanoid(12);
   const adRequest = {
     id: reqId,
@@ -230,7 +244,7 @@ app.post("/api/ads/:id/submit-tx", requireAuth, requireRole("advertiser"), (req,
   const txSignature = String(req.body?.txSignature || "").trim();
   if (!txSignature) return res.status(400).json({ error: "txSignature required" });
 
-  const db = readDb();
+  const db = ensureCollections(readDb());
   const ad = db.adRequests.find((r) => r.id === adId);
   if (!ad) return res.status(404).json({ error: "Ad request not found" });
   if (ad.advertiserWallet !== req.session.walletAddress) {
@@ -273,7 +287,7 @@ function txMatchesAd(parsedTx, ad) {
 
 app.post("/api/ads/:id/check-payment", requireAuth, (req, res) => {
   const adId = req.params.id;
-  const db = readDb();
+  const db = ensureCollections(readDb());
   const ad = db.adRequests.find((r) => r.id === adId);
   if (!ad) return res.status(404).json({ error: "Ad request not found" });
 
@@ -330,7 +344,7 @@ app.post("/api/ads/:id/check-payment", requireAuth, (req, res) => {
 });
 
 app.get("/api/recipient/notifications", requireAuth, requireRole("recipient"), (req, res) => {
-  const db = readDb();
+  const db = ensureCollections(readDb());
   const notifications = db.notifications
     .filter((n) => n.recipientWallet === req.session.walletAddress)
     .sort((a, b) => b.shownAt - a.shownAt);
@@ -344,7 +358,7 @@ app.post("/api/recipient/notifications/:id/:action", requireAuth, requireRole("r
     return res.status(400).json({ error: "Invalid action" });
   }
 
-  const db = readDb();
+  const db = ensureCollections(readDb());
   const n = db.notifications.find((x) => x.id === id && x.recipientWallet === req.session.walletAddress);
   if (!n) return res.status(404).json({ error: "Notification not found" });
 
@@ -360,9 +374,129 @@ app.post("/api/recipient/notifications/:id/:action", requireAuth, requireRole("r
 });
 
 app.get("/api/ads/:id", requireAuth, (req, res) => {
-  const ad = readDb().adRequests.find((r) => r.id === req.params.id);
+  const ad = ensureCollections(readDb()).adRequests.find((r) => r.id === req.params.id);
   if (!ad) return res.status(404).json({ error: "Not found" });
   res.json({ adRequest: ad });
+});
+
+// Agent gateway scaffold endpoints (for paid skill offerings)
+app.get("/api/agent/health", (_req, res) => {
+  res.json({ ok: true, receiverWallet: AGENT_GATEWAY_RECEIVER, ts: Date.now() });
+});
+
+app.post("/api/agent/skills", requireAuth, (req, res) => {
+  const name = String(req.body?.name || "").trim();
+  const description = String(req.body?.description || "").trim();
+  const basePriceLamports = Number(req.body?.basePriceLamports || 0);
+
+  if (!name) return res.status(400).json({ error: "Skill name required" });
+  if (!Number.isFinite(basePriceLamports) || basePriceLamports <= 0) {
+    return res.status(400).json({ error: "basePriceLamports must be > 0" });
+  }
+
+  const db = ensureCollections(readDb());
+  const skill = {
+    id: nanoid(10),
+    ownerWallet: req.session.walletAddress,
+    name,
+    description,
+    basePriceLamports,
+    createdAt: Date.now(),
+  };
+  db.agentSkills.push(skill);
+  writeDb(db);
+  res.json({ skill });
+});
+
+app.get("/api/agent/skills", (_req, res) => {
+  const db = ensureCollections(readDb());
+  res.json({
+    skills: db.agentSkills.map((s) => ({
+      ...s,
+      basePriceSol: Number(s.basePriceLamports) / LAMPORTS_PER_SOL,
+    })),
+  });
+});
+
+app.post("/api/agent/quote", (req, res) => {
+  const skillId = String(req.body?.skillId || "");
+  const units = Number(req.body?.units || 1);
+  const db = ensureCollections(readDb());
+  const skill = db.agentSkills.find((s) => s.id === skillId);
+  if (!skill) return res.status(404).json({ error: "Skill not found" });
+
+  const dueLamports = quoteLamports(skill.basePriceLamports, units);
+  res.json({
+    skillId,
+    units,
+    dueLamports,
+    dueSol: dueLamports / LAMPORTS_PER_SOL,
+    receiverWallet: AGENT_GATEWAY_RECEIVER,
+  });
+});
+
+app.post("/api/agent/execute", requireAuth, async (req, res) => {
+  const skillId = String(req.body?.skillId || "");
+  const txSignature = String(req.body?.txSignature || "").trim();
+  const units = Number(req.body?.units || 1);
+  const payload = req.body?.payload || {};
+
+  if (!skillId || !txSignature) {
+    return res.status(400).json({ error: "skillId and txSignature are required" });
+  }
+
+  const db = ensureCollections(readDb());
+  const skill = db.agentSkills.find((s) => s.id === skillId);
+  if (!skill) return res.status(404).json({ error: "Skill not found" });
+
+  const dueLamports = quoteLamports(skill.basePriceLamports, units);
+
+  try {
+    const tx = await connection.getParsedTransaction(txSignature, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+
+    if (!tx || tx.meta?.err) {
+      return res.status(400).json({ error: "Transaction not confirmed/successful yet" });
+    }
+
+    let paid = 0;
+    for (const i of tx.transaction.message.instructions || []) {
+      if (i.program !== "system" || !i.parsed || i.parsed.type !== "transfer") continue;
+      const info = i.parsed.info || {};
+      if (info.source === req.session.walletAddress && info.destination === AGENT_GATEWAY_RECEIVER) {
+        paid += Number(info.lamports || 0);
+      }
+    }
+
+    if (paid < dueLamports) {
+      return res.status(402).json({ error: "Insufficient payment", dueLamports, paidLamports: paid });
+    }
+
+    const exec = {
+      id: nanoid(12),
+      skillId,
+      callerWallet: req.session.walletAddress,
+      txSignature,
+      units,
+      dueLamports,
+      paidLamports: paid,
+      payload,
+      status: "completed",
+      result: {
+        message: "Agent gateway scaffold executed",
+        echo: payload,
+      },
+      createdAt: Date.now(),
+    };
+
+    db.agentExecutions.push(exec);
+    writeDb(db);
+    res.json({ execution: exec });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.listen(PORT, () => {
