@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paid Ad Notifications - Devnet Demo</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 760px; margin: 24px auto; padding: 0 12px; }
+      button { margin: 6px 6px 6px 0; padding: 10px 14px; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin: 12px 0; }
+      code { background: #f6f6f6; padding: 2px 5px; border-radius: 6px; }
+      pre { background: #111; color: #f0f0f0; padding: 12px; border-radius: 10px; overflow-x: auto; }
+      .ok { color: #137333; }
+      .warn { color: #b06000; }
+      .err { color: #b3261e; }
+    </style>
+  </head>
+  <body>
+    <h1>Paid Ad Notifications (Devnet)</h1>
+    <p>Connect wallet, register your wallet policy on-chain, then verify it exists.</p>
+
+    <div class="card">
+      <button id="connectBtn">1) Connect Wallet</button>
+      <button id="registerBtn" disabled>2) Register Wallet Policy</button>
+      <button id="verifyBtn" disabled>3) Verify Registration</button>
+      <div id="wallet"></div>
+      <div id="policy"></div>
+    </div>
+
+    <div class="card">
+      <b>Program:</b> <code id="programId"></code><br />
+      <b>Cluster:</b> <code>devnet</code>
+    </div>
+
+    <pre id="log">Ready.</pre>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.min.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>

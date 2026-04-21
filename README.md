@@ -28,6 +28,27 @@ Key instructions:
 
 See `docs/CONTRACT_DEVNET_MINIMAL.md` for details and next deploy steps.
 
+## Wallet Connect + Registration Demo Web UI
+A minimal demo page is available in `web/`.
+
+What it does:
+- Connect Phantom wallet
+- Register the wallet on-chain via `upsert_policy`
+- Verify registration by reading the policy PDA back from devnet
+
+Run it locally:
+```bash
+cd web
+python3 -m http.server 8080
+```
+Then open:
+- `http://localhost:8080`
+
+Requirements:
+- Phantom wallet installed in browser
+- Wallet set to **Devnet**
+- Some devnet SOL for transaction fee
+
 ## Docs
 - `docs/PRD.md`
 - `docs/SRD.md`
