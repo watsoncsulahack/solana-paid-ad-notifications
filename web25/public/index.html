@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paid Ads Web2.5 MVP</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 980px; margin: 20px auto; padding: 0 12px; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 12px 0; }
+      button { padding: 8px 12px; margin: 4px 4px 4px 0; }
+      input, textarea, select { width: 100%; padding: 8px; margin: 6px 0; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .hide { display: none; }
+      pre { background: #111; color: #efefef; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+      .pill { background: #eee; border-radius: 99px; padding: 3px 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Paid Ad Notifications, Web2.5 MVP</h1>
+    <p>Wallet auth by signature, on-chain advertiser payment, off-chain popup routing.</p>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Role</label>
+          <select id="role">
+            <option value="recipient">Recipient</option>
+            <option value="advertiser">Advertiser</option>
+          </select>
+        </div>
+        <div>
+          <label>Network</label>
+          <div class="pill">Solana Devnet</div>
+        </div>
+      </div>
+      <button id="connectBtn">Connect Phantom</button>
+      <button id="loginBtn" disabled>Sign In (wallet signature)</button>
+      <div id="session"></div>
+    </div>
+
+    <div id="recipientCard" class="card hide">
+      <h3>Recipient</h3>
+      <label>Preferences (json)</label>
+      <textarea id="recipientPrefs" rows="5">{"categories":["jobs","offers"],"quietHours":"23:00-08:00"}</textarea>
+      <button id="optInBtn">Save Opt-in Preferences</button>
+      <button id="refreshNotifsBtn">Check Notifications</button>
+      <div id="notifications"></div>
+    </div>
+
+    <div id="advertiserCard" class="card hide">
+      <h3>Advertiser</h3>
+      <label>Recipient Wallet</label>
+      <input id="recipientWallet" placeholder="Recipient wallet address" />
+      <label>Ad Content</label>
+      <textarea id="adContent" rows="4" placeholder="Your paid ad message"></textarea>
+      <label>Amount (SOL)</label>
+      <input id="adAmount" type="number" step="0.0001" value="0.001" />
+      <button id="createAdBtn">Create Ad Request</button>
+      <button id="payAdBtn" disabled>Pay Recipient + Link Tx</button>
+      <div id="adState"></div>
+    </div>
+
+    <pre id="log">Ready.</pre>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

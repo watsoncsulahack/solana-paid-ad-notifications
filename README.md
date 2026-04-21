@@ -65,6 +65,25 @@ Expected URL:
 
 At that URL, Phantom wallet connect should work over HTTPS.
 
+## Web2.5 MVP (Pivot Implementation)
+A backend-driven web2.5 demo is included under `web25/`.
+
+What it implements:
+- Wallet signature authentication (recipient + advertiser roles)
+- Recipient opt-in and preferences (off-chain)
+- Advertiser ad request creation (off-chain)
+- Advertiser on-chain payment (devnet transfer)
+- Backend tx signature mapping and confirmation checks
+- Recipient popup-style paid ad notifications after payment confirmation
+
+Run locally:
+```bash
+npm install
+npm run web25:start
+```
+Then open:
+- `http://localhost:8787`
+
 ## Docs
 - `docs/PRD.md`
 - `docs/SRD.md`
