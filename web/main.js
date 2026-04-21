@@ -14,51 +14,70 @@ document.getElementById("programId").textContent = PROGRAM_ID.toBase58();
 let provider;
 let walletPubkey;
 
+const enc = new TextEncoder();
+
 function log(msg) {
   logEl.textContent = `${new Date().toISOString()} ${msg}\n` + logEl.textContent;
 }
 
-function u64LE(n) {
-  const b = Buffer.alloc(8);
-  b.writeBigUInt64LE(BigInt(n));
-  return b;
+function hexErr(e) {
+  if (!e) return "unknown error";
+  if (typeof e === "string") return e;
+  return e.message || JSON.stringify(e);
+}
+
+function concatBytes(...parts) {
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+
+function u8(n) {
+  return Uint8Array.of(n & 0xff);
 }
 
 function u16LE(n) {
-  const b = Buffer.alloc(2);
-  b.writeUInt16LE(n);
+  const b = new Uint8Array(2);
+  new DataView(b.buffer).setUint16(0, n, true);
   return b;
 }
 
 function u32LE(n) {
-  const b = Buffer.alloc(4);
-  b.writeUInt32LE(n);
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setUint32(0, n, true);
+  return b;
+}
+
+function u64LE(n) {
+  const b = new Uint8Array(8);
+  new DataView(b.buffer).setBigUint64(0, BigInt(n), true);
   return b;
 }
 
 async function instructionDiscriminator(name) {
-  const input = new TextEncoder().encode(`global:${name}`);
+  const input = enc.encode(`global:${name}`);
   const hashBuffer = await crypto.subtle.digest("SHA-256", input);
-  return Buffer.from(hashBuffer).subarray(0, 8);
+  return new Uint8Array(hashBuffer).slice(0, 8);
 }
 
 function encodeUpsertPolicyArgs({ enabled, minFeeLamports, maxNotificationsPerPeriod, allowedCategories }) {
-  const out = [];
-  out.push(Buffer.from([enabled ? 1 : 0]));
-  out.push(u64LE(minFeeLamports));
-  out.push(u16LE(maxNotificationsPerPeriod));
-  out.push(u32LE(allowedCategories.length));
+  const out = [u8(enabled ? 1 : 0), u64LE(minFeeLamports), u16LE(maxNotificationsPerPeriod), u32LE(allowedCategories.length)];
   for (const c of allowedCategories) {
-    const bytes = Buffer.from(c, "utf8");
+    const bytes = enc.encode(c);
     out.push(u32LE(bytes.length));
     out.push(bytes);
   }
-  return Buffer.concat(out);
+  return concatBytes(...out);
 }
 
 async function getPolicyPda(recipient) {
   const [pda] = await PublicKey.findProgramAddress(
-    [Buffer.from("policy"), recipient.toBuffer()],
+    [enc.encode("policy"), recipient.toBytes()],
     PROGRAM_ID
   );
   return pda;
@@ -88,7 +107,7 @@ async function registerPolicy() {
   const discriminator = await instructionDiscriminator("upsert_policy");
   const args = encodeUpsertPolicyArgs({
     enabled: true,
-    minFeeLamports: 1000000, // 0.001 SOL
+    minFeeLamports: 1_000_000,
     maxNotificationsPerPeriod: 10,
     allowedCategories: ["jobs", "offers"],
   });
@@ -100,37 +119,42 @@ async function registerPolicy() {
       { pubkey: policyPda, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    data: Buffer.concat([discriminator, args]),
+    data: concatBytes(discriminator, args),
   });
 
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  const tx = new Transaction({ feePayer: walletPubkey, blockhash, lastValidBlockHeight }).add(ix);
+  const latest = await connection.getLatestBlockhash("confirmed");
+  const tx = new Transaction().add(ix);
+  tx.feePayer = walletPubkey;
+  tx.recentBlockhash = latest.blockhash;
 
-  const sig = await provider.signAndSendTransaction(tx);
-  await connection.confirmTransaction({ signature: sig.signature, blockhash, lastValidBlockHeight }, "confirmed");
+  const sent = await provider.signAndSendTransaction(tx);
+  const signature = typeof sent === "string" ? sent : sent.signature;
+  await connection.confirmTransaction({ signature, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight }, "confirmed");
 
-  policyEl.innerHTML = `Policy PDA: <code>${policyPda.toBase58()}</code><br/>Last tx: <code>${sig.signature}</code>`;
-  log(`Policy upsert tx: ${sig.signature}`);
+  policyEl.innerHTML = `Policy PDA: <code>${policyPda.toBase58()}</code><br/>Last tx: <code>${signature}</code>`;
+  log(`Policy upsert tx: ${signature}`);
 }
 
-function readBool(buf, offset) {
-  return { value: buf[offset] === 1, offset: offset + 1 };
+function readU8(data, offset) {
+  return { value: data[offset], offset: offset + 1 };
 }
 
-function readU8(buf, offset) {
-  return { value: buf[offset], offset: offset + 1 };
+function readBool(data, offset) {
+  return { value: data[offset] === 1, offset: offset + 1 };
 }
 
-function readU16(buf, offset) {
-  return { value: buf.readUInt16LE(offset), offset: offset + 2 };
+function readU16(data, offset) {
+  const v = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint16(offset, true);
+  return { value: v, offset: offset + 2 };
 }
 
-function readU64(buf, offset) {
-  return { value: buf.readBigUInt64LE(offset), offset: offset + 8 };
+function readU64(data, offset) {
+  const v = new DataView(data.buffer, data.byteOffset, data.byteLength).getBigUint64(offset, true);
+  return { value: v, offset: offset + 8 };
 }
 
-function readPubkey(buf, offset) {
-  return { value: new PublicKey(buf.subarray(offset, offset + 32)).toBase58(), offset: offset + 32 };
+function readPubkey(data, offset) {
+  return { value: new PublicKey(data.slice(offset, offset + 32)).toBase58(), offset: offset + 32 };
 }
 
 function decodePolicyAccount(data) {
@@ -141,6 +165,7 @@ function decodePolicyAccount(data) {
   const enabled = readBool(data, o); o = enabled.offset;
   const minFee = readU64(data, o); o = minFee.offset;
   const maxPer = readU16(data, o); o = maxPer.offset;
+
   return {
     bump: bump.value,
     recipient: recipient.value,
@@ -167,7 +192,7 @@ async function verifyPolicy() {
     return;
   }
 
-  const decoded = decodePolicyAccount(Buffer.from(acc.data));
+  const decoded = decodePolicyAccount(acc.data);
   policyEl.innerHTML = `
     <div class="ok">Registration verified on-chain ✅</div>
     <div>Policy PDA: <code>${policyPda.toBase58()}</code></div>
@@ -181,5 +206,5 @@ async function verifyPolicy() {
 }
 
 connectBtn.addEventListener("click", connectWallet);
-registerBtn.addEventListener("click", () => registerPolicy().catch((e) => log(`ERROR register: ${e.message || e}`)));
-verifyBtn.addEventListener("click", () => verifyPolicy().catch((e) => log(`ERROR verify: ${e.message || e}`)));
+registerBtn.addEventListener("click", () => registerPolicy().catch((e) => log(`ERROR register: ${hexErr(e)}`)));
+verifyBtn.addEventListener("click", () => verifyPolicy().catch((e) => log(`ERROR verify: ${hexErr(e)}`)));
