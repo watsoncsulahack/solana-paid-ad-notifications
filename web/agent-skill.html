@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paid Agent Skill — Monetization</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 840px; margin: 24px auto; padding: 0 12px; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin: 12px 0; }
+      code, pre { background: #f6f6f6; padding: 2px 4px; border-radius: 6px; }
+      pre { padding: 10px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Paid Agent Skill — Delivery Gateway</h1>
+    <p>Use this as your monetized skill offering for paid ad delivery verification and trigger orchestration.</p>
+
+    <div class="card">
+      <h3>Monetization Model</h3>
+      <ul>
+        <li>Publish skill with a base lamport price.</li>
+        <li>Client asks quote for N units.</li>
+        <li>Client pays on-chain.</li>
+        <li>Gateway executes only after payment verification.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>API Scaffold (web2.5 backend)</h3>
+      <pre>
+GET  /api/agent/health
+POST /api/agent/skills
+GET  /api/agent/skills
+POST /api/agent/quote
+POST /api/agent/execute
+      </pre>
+    </div>
+
+    <div class="card">
+      <h3>Example Listing JSON</h3>
+      <pre>{
+  "name": "Paid Ad Delivery Gateway",
+  "basePriceLamports": 1000000,
+  "network": "solana-devnet",
+  "billing": "per-execution"
+}</pre>
+    </div>
+
+    <p><a href="./index.html">Back to main app</a></p>
+  </body>
+</html>
