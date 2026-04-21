@@ -49,6 +49,22 @@ Requirements:
 - Wallet set to **Devnet**
 - Some devnet SOL for transaction fee
 
+## GitHub Pages (Hosted Wallet Demo)
+This repo includes a GitHub Actions workflow that deploys `web/` to GitHub Pages.
+
+Workflow:
+- `.github/workflows/deploy-pages.yml`
+
+One-time setup in GitHub:
+1. Go to **Settings → Pages**
+2. Under **Build and deployment**, set **Source = GitHub Actions**
+3. Run workflow **Deploy Web Demo to GitHub Pages** (or push to `main` with changes in `web/`)
+
+Expected URL:
+- `https://watsoncsulahack.github.io/solana-paid-ad-notifications/`
+
+At that URL, Phantom wallet connect should work over HTTPS.
+
 ## Docs
 - `docs/PRD.md`
 - `docs/SRD.md`
