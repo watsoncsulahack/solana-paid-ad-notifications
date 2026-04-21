@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("8V3Q2XHk2LhM1SYwX5wP5j8QWqL2rJ5B9T1n2m3Q4xYz");
+declare_id!("AAcS57umqK8gBQagMb9xAXCpwFtTbbLNFVA8K1bCayAY");
 
 const MAX_CATEGORIES: usize = 8;
 const MAX_CATEGORY_LEN: usize = 32;

@@ -3,7 +3,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-paid_ad_notifications = "8V3Q2XHk2LhM1SYwX5wP5j8QWqL2rJ5B9T1n2m3Q4xYz"
+paid_ad_notifications = "AAcS57umqK8gBQagMb9xAXCpwFtTbbLNFVA8K1bCayAY"
 
 [provider]
 cluster = "Devnet"
