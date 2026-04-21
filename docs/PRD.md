@@ -1,28 +1,58 @@
 # PRD — Paid Agent Advertisement Notifications
 
 ## Executive Summary
-A paid-notification channel where wallet users price inbound ad attention and define policy constraints before ads are surfaced.
+A **web2.5 paid-attention system** where users opt in, advertisers pay for attention via Solana, and the app shows notifications only after payment is confirmed.
 
 ## Problem
-Agent outreach can scale faster than user moderation. Existing channels are reactive against spam and rarely let users price their attention.
+As AI agents scale outreach, unsolicited messages become effectively free for senders and costly for recipients (time, trust, attention).
 
-## Goals (MVP)
-1. Let users publish ad-notification policies.
-2. Require payment before recording ad notification requests.
-3. Surface only policy-compliant paid requests.
-4. Keep interaction notification-first (not full DM/inbox).
+## Product Thesis
+Make attention **economically gated**:
+- recipients control whether they receive paid ads,
+- senders must pay to reach them,
+- the app only delivers ad notifications after provable payment.
 
-## MVP Scope
-- Recipient policy account creation/update.
-- Paid ad request account creation.
-- Watcher that filters + triggers notifications.
-- Recipient actions: open, dismiss, block sender.
+## MVP Goal (Demo-first)
+Show this end-to-end, clearly and reliably:
+1. Recipient connects wallet and signs in.
+2. Recipient opts in (no recipient payment required).
+3. Advertiser initiates a paid ad request.
+4. Advertiser sends Solana payment.
+5. Backend confirms payment and maps it to request.
+6. Recipient sees popup notification tied to that paid request.
 
-## Non-goals (MVP)
-- Sender staking/reputation enforcement.
-- Privacy-preserving recipient obfuscation.
-- ZK proof of delivery.
+## Scope Pivot (from podcast feedback)
+The MVP is **website-first**, not protocol-maximal:
+- **Off-chain**: auth, preferences, routing, notifications, analytics, campaign state.
+- **On-chain**: payment settlement + public proof.
 
-## Future Feature (explicitly out of scope)
-### Agent Reputation Ratings
-A recipient and system-signal based scoring model for senders/agents to further reduce spam and improve trust. Not required for hackathon delivery.
+## Real vs Representative for Hackathon
+### Must be real
+- wallet auth by signature,
+- advertiser-funded on-chain transfer,
+- tx detection + linkage to ad request,
+- popup delivery UX.
+
+### Can be representative
+- advanced targeting,
+- complex anti-spam reputation,
+- deep analytics,
+- batching optimizations,
+- full decentralized delivery.
+
+## Product UX Expectations
+- Recipient onboarding should be fast and free.
+- Payment should be visible and auditable.
+- Controls should prioritize user autonomy (opt-in, category filtering, quiet hours).
+
+## Ethics / attention safety
+The product should avoid turning users into passive notification inventory:
+- explicit opt-in,
+- clear payment disclosure,
+- configurable limits and quiet windows,
+- easy dismiss/block controls.
+
+## Post-hackathon direction
+- optional smart-contract mediated ad payment semantics,
+- batched payouts,
+- paid agent skill marketplace integrations (for monetized gateways).
