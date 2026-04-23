@@ -86,12 +86,28 @@ function requestRouter(type, payload = {}, timeoutMs = 12000) {
   });
 }
 
+function getPhantomProvider() {
+  if (window.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if (window.solana?.isPhantom) return window.solana;
+  return null;
+}
+
+function openInPhantomInAppBrowser() {
+  const url = encodeURIComponent(window.location.href);
+  const ref = encodeURIComponent(window.location.origin);
+  window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
+}
+
 async function connectPhantom() {
-  if (!window.solana?.isPhantom) {
-    alert("Phantom extension not found on this browser.");
+  phantom = getPhantomProvider();
+  if (!phantom) {
+    const openInPhantom = confirm(
+      "Phantom provider not found in this browser. On mobile, open this page inside Phantom's in-app browser. Open in Phantom now?"
+    );
+    if (openInPhantom) openInPhantomInAppBrowser();
     return;
   }
-  phantom = window.solana;
+
   const r = await phantom.connect();
   walletMode = "phantom";
   els.registerBtn.disabled = false;

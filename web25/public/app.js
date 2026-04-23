@@ -77,12 +77,28 @@ function showRolePanels(role) {
   els.advertiserCard.classList.toggle("hide", role !== "advertiser");
 }
 
+function getPhantomProvider() {
+  if (window.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if (window.solana?.isPhantom) return window.solana;
+  return null;
+}
+
+function openInPhantomInAppBrowser() {
+  const url = encodeURIComponent(window.location.href);
+  const ref = encodeURIComponent(window.location.origin);
+  window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
+}
+
 async function connectWallet() {
-  if (!window.solana?.isPhantom) {
-    alert("Install Phantom wallet first.");
+  provider = getPhantomProvider();
+  if (!provider) {
+    const openInPhantom = confirm(
+      "Phantom provider not detected in this browser. On mobile, open this page inside Phantom's in-app browser for wallet injection. Open in Phantom now?"
+    );
+    if (openInPhantom) openInPhantomInAppBrowser();
     return;
   }
-  provider = window.solana;
+
   const r = await provider.connect();
   wallet = new PublicKey(r.publicKey.toString());
   walletMode = "phantom";
